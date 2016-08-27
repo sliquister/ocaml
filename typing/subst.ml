@@ -20,16 +20,29 @@ open Path
 open Types
 open Btype
 
+type rewrite_paths =
+  { rewrite_type_constr_application :
+      Path.t -> type_expr list -> type_desc option;
+    rewrite_type_path : Path.t -> Path.t option;
+  }
+
 type t =
   { types: (Ident.t, Path.t) Tbl.t;
     modules: (Ident.t, Path.t) Tbl.t;
     modtypes: (Ident.t, module_type) Tbl.t;
     for_saving: bool;
-    nongen_level: int }
+    nongen_level: int;
+    rewrite_paths : rewrite_paths option;
+  }
 
 let identity =
-  { types = Tbl.empty; modules = Tbl.empty; modtypes = Tbl.empty;
-    for_saving = false; nongen_level = generic_level }
+  { types = Tbl.empty;
+    modules = Tbl.empty;
+    modtypes = Tbl.empty;
+    for_saving = false;
+    nongen_level = generic_level;
+    rewrite_paths = None;
+  }
 
 let add_type id p s = { s with types = Tbl.add id p s.types }
 
@@ -40,6 +53,9 @@ let add_modtype id ty s = { s with modtypes = Tbl.add id ty s.modtypes }
 let for_saving s = { s with for_saving = true }
 
 let set_nongen_level s lev = { s with nongen_level = lev }
+
+let set_rewrite_paths s rewrite_paths =
+  { s with rewrite_paths = Some rewrite_paths }
 
 let loc s x =
   if s.for_saving && not !Clflags.keep_locs then Location.none else x
@@ -100,6 +116,14 @@ let type_path s p =
   | LocalExt _ -> type_path s p
   | Ext (p, cstr) -> Pdot(module_path s p, cstr, nopos)
 
+let type_path s p =
+  match s.rewrite_paths with
+  | None -> type_path s p
+  | Some rewrite ->
+     match rewrite.rewrite_type_path p with
+     | None -> type_path s p
+     | Some path -> path
+
 (* Special type ids for saved signatures *)
 
 let new_id = ref (-1)
@@ -147,8 +171,15 @@ let rec typexp s ty =
     ty.desc <- Tsubst ty';
     ty'.desc <-
       begin match desc with
-      | Tconstr(p, tl, _abbrev) ->
-          Tconstr(type_path s p, List.map (typexp s) tl, ref Mnil)
+      | Tconstr (p, args, _abbrev) ->
+         let args = List.map (typexp s) args in
+         begin match s.rewrite_paths with
+         | None -> Tconstr(type_path s p, args, ref Mnil)
+         | Some rewrite ->
+            match rewrite.rewrite_type_constr_application p args with
+            | None -> Tconstr(type_path s p, args, ref Mnil)
+            | Some type_desc -> type_desc
+         end
       | Tpackage(p, n, tl) ->
           Tpackage(modtype_path s p, n, List.map (typexp s) tl)
       | Tobject (t1, name) ->
@@ -433,8 +464,12 @@ let merge_tbls f m1 m2 =
      apply (compose s1 s2) x = apply s2 (apply s1 x) *)
 
 let compose s1 s2 =
+  if (Obj.size (Obj.repr s1) > 5 && s1.rewrite_paths <> None)
+  || (Obj.size (Obj.repr s2) > 5 && s2.rewrite_paths <> None)
+  then invalid_arg "Subst.compose";
   { types = merge_tbls (type_path s2) s1.types s2.types;
     modules = merge_tbls (module_path s2) s1.modules s2.modules;
     modtypes = merge_tbls (modtype s2) s1.modtypes s2.modtypes;
     for_saving = s1.for_saving || s2.for_saving;
-    nongen_level = min s1.nongen_level s2.nongen_level }
+    nongen_level = min s1.nongen_level s2.nongen_level;
+    rewrite_paths = None; }

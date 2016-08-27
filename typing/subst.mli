@@ -43,6 +43,18 @@ val reset_for_saving: unit -> unit
 val module_path: t -> Path.t -> Path.t
 val type_path: t -> Path.t -> Path.t
 
+type rewrite_paths =
+  { rewrite_type_constr_application :
+      Path.t -> type_expr list -> type_desc option;
+    rewrite_type_path : Path.t -> Path.t option;
+  }
+
+(** Substitutions using this cannot be composed. When the functions return
+    [Some ..], they must not return identifiers bound in the signature being
+    rewritten, as these are refreshed by the substitution, but the substitution
+    is not applied on the returned values. *)
+val set_rewrite_paths : t -> rewrite_paths -> t
+
 val type_expr: t -> type_expr -> type_expr
 val class_type: t -> class_type -> class_type
 val value_description: t -> value_description -> value_description
