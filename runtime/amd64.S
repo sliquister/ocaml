@@ -389,6 +389,28 @@ LBL(caml_call_gc):
         ret
 CFI_ENDPROC
 
+#define CAML_CALL_GC(N) \
+FUNCTION(G(caml_call_gc_##N))   ; \
+CFI_STARTPROC                   ; \
+LBL(caml_call_gc_##N):          ; \
+        addq    $##N, %r15      ; \
+        jmp     G(caml_call_gc) ; \
+CFI_ENDPROC
+
+CAML_CALL_GC(8)
+CAML_CALL_GC(16)
+CAML_CALL_GC(24)
+CAML_CALL_GC(32)
+CAML_CALL_GC(40)
+CAML_CALL_GC(48)
+CAML_CALL_GC(56)
+CAML_CALL_GC(64)
+CAML_CALL_GC(72)
+CAML_CALL_GC(80)
+CAML_CALL_GC(88)
+CAML_CALL_GC(96)
+CAML_CALL_GC(104)
+
 FUNCTION(G(caml_alloc1))
 CFI_STARTPROC
 LBL(caml_alloc1):
