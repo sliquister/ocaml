@@ -96,16 +96,24 @@ let compile_phrase ~ppf_dump p =
   | Cfunction fd -> compile_fundecl ~ppf_dump fd
   | Cdata dl -> Emit.data dl
 
+let compile_phrase_using_linscan ~ppf_dump phrase =
+  Misc.protect_ref use_linscan true
+    (fun () -> compile_phrase ~ppf_dump phrase)
 
 (* For the native toplevel: generates generic functions unless
    they are already available in the process *)
 let compile_genfuns ~ppf_dump f =
-  List.iter
-    (function
-       | (Cfunction {fun_name = name}) as ph when f name ->
-           compile_phrase ~ppf_dump ph
-       | _ -> ())
-    (Cmmgen.generic_functions true [Compilenv.current_unit_infos ()])
+  let filter l =
+    List.filter (function
+      | Cfunction {fun_name = name} -> f name
+      | _ -> false
+    ) l
+  in
+  let small, large =
+    Cmmgen.generic_functions true [Compilenv.current_unit_infos ()]
+  in
+  List.iter (compile_phrase ~ppf_dump) (filter small);
+  List.iter (compile_phrase_using_linscan ~ppf_dump) (filter large)
 
 let compile_unit asm_filename keep_asm obj_filename gen =
   let create_asm = keep_asm || not !Emitaux.binary_backend_available in

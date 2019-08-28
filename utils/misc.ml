@@ -60,6 +60,13 @@ let protect_refs =
     | x           -> set_refs backup; x
     | exception e -> set_refs backup; raise e
 
+let protect_ref r v f =
+  let backup = !r in
+  r := v;
+  match f () with
+  | x -> r := backup; x
+  | exception e -> r := backup; raise e
+
 (* List functions *)
 
 let rec map_end f l1 l2 =

@@ -205,6 +205,10 @@ let scan_file obj_name tolink = match read_file obj_name with
 
 (* Second pass: generate the startup file and link it with everything else *)
 
+let compile_generic_functions ~ppf_dump (small_phrases, large_phrases) =
+  List.iter (Asmgen.compile_phrase ~ppf_dump) small_phrases;
+  List.iter (Asmgen.compile_phrase_using_linscan ~ppf_dump) large_phrases
+
 let force_linking_of_startup ~ppf_dump =
   Asmgen.compile_phrase ~ppf_dump
     (Cmm.Cdata ([Cmm.Csymbol_address "caml_startup"]))
@@ -232,7 +236,7 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
     List.flatten (List.map (fun (info,_,_) -> info.ui_defines) units_list) in
   compile_phrase (Cmmgen.entry_point name_list);
   let units = List.map (fun (info,_,_) -> info) units_list in
-  List.iter compile_phrase (Cmmgen.generic_functions false units);
+  compile_generic_functions ~ppf_dump (Cmmgen.generic_functions false units);
   Array.iteri
     (fun i name -> compile_phrase (Cmmgen.predef_exception i name))
     Runtimedef.builtin_exceptions;
@@ -258,7 +262,7 @@ let make_shared_startup_file ~ppf_dump units =
   Location.input_name := "caml_startup";
   Compilenv.reset "_shared_startup";
   Emit.begin_assembly ();
-  List.iter compile_phrase
+  compile_generic_functions ~ppf_dump
     (Cmmgen.generic_functions true (List.map fst units));
   compile_phrase (Cmmgen.plugin_header units);
   compile_phrase

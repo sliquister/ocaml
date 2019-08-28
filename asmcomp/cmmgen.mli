@@ -24,7 +24,15 @@ val compunit
 val apply_function: int -> Cmm.phrase
 val send_function: int -> Cmm.phrase
 val curry_function: int -> Cmm.phrase list
-val generic_functions: bool -> Cmx_format.unit_infos list -> Cmm.phrase list
+
+val generic_functions:
+  bool -> Cmx_format.unit_infos list -> Cmm.phrase list * Cmm.phrase list
+(** [generic_functions shared units] returns a pair of phrases (small,
+    large) where [small] is the code generated for functions of usual
+    arities, and [large] is the code generated for larger-than-usual
+    arity, where runtime performance is probably not a concern and so we
+    should not waste compilation time trying to optimize them. *)
+
 val entry_point: string list -> Cmm.phrase
 val global_table: string list -> Cmm.phrase
 val reference_symbols: string list -> Cmm.phrase

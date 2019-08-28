@@ -84,6 +84,10 @@ val protect_refs : ref_and_value list -> (unit -> 'a) -> 'a
     while executing [f]. The previous contents of the references is restored
     even if [f] raises an exception. *)
 
+val protect_ref : 'a ref -> 'a -> (unit -> 'res) -> 'res
+(** [protect_ref ref v f] is a lighter way of writing
+    [protect_refs [R (ref, v)] f] *)
+
 module Stdlib : sig
   module List : sig
     type 'a t = 'a list

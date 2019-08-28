@@ -3811,9 +3811,18 @@ let generic_functions shared units =
       (Int.Set.empty,Int.Set.empty,Int.Set.empty)
       units in
   let apply = if shared then apply else Int.Set.union apply default_apply in
-  let accu = Int.Set.fold (fun n accu -> apply_function n :: accu) apply [] in
-  let accu = Int.Set.fold (fun n accu -> send_function n :: accu) send accu in
-  Int.Set.fold (fun n accu -> curry_function n @ accu) curry accu
+  let phrases ~keep =
+    let apply = Int.Set.filter keep apply
+    and send = Int.Set.filter keep send
+    and curry = Int.Set.filter keep curry in
+    let accu = Int.Set.fold (fun n accu -> apply_function n :: accu) apply [] in
+    let accu = Int.Set.fold (fun n accu -> send_function n :: accu) send accu in
+    Int.Set.fold (fun n accu -> curry_function n @ accu) curry accu
+  in
+  (* We use max_arity_optimized simply to limit the numbers of magic
+     numbers in the code; any number would work. *)
+  let is_small n = abs n <= max_arity_optimized in
+  phrases ~keep:is_small, phrases ~keep:(Fun.negate is_small)
 
 (* Generate the entry point *)
 
