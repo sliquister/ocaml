@@ -63,34 +63,32 @@ let rec regalloc ~ppf_dump round fd =
     Reg.reinit(); Liveness.fundecl newfd; regalloc ~ppf_dump (round + 1) newfd
   end else newfd
 
-let (++) x f = f x
-
 let compile_fundecl ~ppf_dump fd_cmm =
   Proc.init ();
   Reg.reset();
   fd_cmm
-  ++ Profile.record ~accumulate:true "selection" Selection.fundecl
-  ++ pass_dump_if ppf_dump dump_selection "After instruction selection"
-  ++ Profile.record ~accumulate:true "comballoc" Comballoc.fundecl
-  ++ pass_dump_if ppf_dump dump_combine "After allocation combining"
-  ++ Profile.record ~accumulate:true "cse" CSE.fundecl
-  ++ pass_dump_if ppf_dump dump_cse "After CSE"
-  ++ Profile.record ~accumulate:true "liveness" liveness
-  ++ Profile.record ~accumulate:true "deadcode" Deadcode.fundecl
-  ++ pass_dump_if ppf_dump dump_live "Liveness analysis"
-  ++ Profile.record ~accumulate:true "spill" Spill.fundecl
-  ++ Profile.record ~accumulate:true "liveness" liveness
-  ++ pass_dump_if ppf_dump dump_spill "After spilling"
-  ++ Profile.record ~accumulate:true "split" Split.fundecl
-  ++ pass_dump_if ppf_dump dump_split "After live range splitting"
-  ++ Profile.record ~accumulate:true "liveness" liveness
-  ++ Profile.record ~accumulate:true "regalloc" (regalloc ~ppf_dump 1)
-  ++ Profile.record ~accumulate:true "available_regs" Available_regs.fundecl
-  ++ Profile.record ~accumulate:true "linearize" Linearize.fundecl
-  ++ pass_dump_linear_if ppf_dump dump_linear "Linearized code"
-  ++ Profile.record ~accumulate:true "scheduling" Scheduling.fundecl
-  ++ pass_dump_linear_if ppf_dump dump_scheduling "After instruction scheduling"
-  ++ Profile.record ~accumulate:true "emit" Emit.fundecl
+  |> Profile.record ~accumulate:true "selection" Selection.fundecl
+  |> pass_dump_if ppf_dump dump_selection "After instruction selection"
+  |> Profile.record ~accumulate:true "comballoc" Comballoc.fundecl
+  |> pass_dump_if ppf_dump dump_combine "After allocation combining"
+  |> Profile.record ~accumulate:true "cse" CSE.fundecl
+  |> pass_dump_if ppf_dump dump_cse "After CSE"
+  |> Profile.record ~accumulate:true "liveness" liveness
+  |> Profile.record ~accumulate:true "deadcode" Deadcode.fundecl
+  |> pass_dump_if ppf_dump dump_live "Liveness analysis"
+  |> Profile.record ~accumulate:true "spill" Spill.fundecl
+  |> Profile.record ~accumulate:true "liveness" liveness
+  |> pass_dump_if ppf_dump dump_spill "After spilling"
+  |> Profile.record ~accumulate:true "split" Split.fundecl
+  |> pass_dump_if ppf_dump dump_split "After live range splitting"
+  |> Profile.record ~accumulate:true "liveness" liveness
+  |> Profile.record ~accumulate:true "regalloc" (regalloc ~ppf_dump 1)
+  |> Profile.record ~accumulate:true "available_regs" Available_regs.fundecl
+  |> Profile.record ~accumulate:true "linearize" Linearize.fundecl
+  |> pass_dump_linear_if ppf_dump dump_linear "Linearized code"
+  |> Profile.record ~accumulate:true "scheduling" Scheduling.fundecl
+  |> pass_dump_linear_if ppf_dump dump_scheduling "After instruction scheduling"
+  |> Profile.record ~accumulate:true "emit" Emit.fundecl
 
 let compile_phrase ~ppf_dump p =
   if !dump_cmm then fprintf ppf_dump "%a@." Printcmm.phrase p;
@@ -134,9 +132,9 @@ let end_gen_implementation ?toplevel ~ppf_dump
     (clambda : Clambda.with_constants) =
   Emit.begin_assembly ();
   clambda
-  ++ Profile.record "cmm" Cmmgen.compunit
-  ++ Profile.record "compile_phrases" (List.iter (compile_phrase ~ppf_dump))
-  ++ (fun () -> ());
+  |> Profile.record "cmm" Cmmgen.compunit
+  |> Profile.record "compile_phrases" (List.iter (compile_phrase ~ppf_dump))
+  |> (fun () -> ());
   (match toplevel with None -> () | Some f -> compile_genfuns ~ppf_dump f);
   (* We add explicit references to external primitive symbols.  This
      is to ensure that the object files that define these symbols,
